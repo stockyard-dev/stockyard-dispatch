@@ -1,0 +1,20 @@
+services:
+  dispatch:
+    image: ghcr.io/stockyard-dev/stockyard-dispatch:latest
+    ports:
+      - "8900:8900"
+    environment:
+      - PORT=${STOCKYARD_PORT:-8900}
+      - DATA_DIR=${STOCKYARD_DATA_DIR:-/data}
+      - DISPATCH_LICENSE_KEY=${STOCKYARD_DISPATCH_LICENSE_KEY:-}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - SMTP_FROM=${SMTP_FROM}
+    volumes:
+      - dispatch-data:/data
+    restart: unless-stopped
+volumes:
+  dispatch-data:
+    driver: local
