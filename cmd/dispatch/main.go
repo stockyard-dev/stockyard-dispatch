@@ -9,8 +9,6 @@ import (
 	"os"
 	"strconv"
 	"time"
-
-	"github.com/stockyard-dev/stockyard-dispatch/internal/license"
 	"github.com/stockyard-dev/stockyard-dispatch/internal/server"
 	"github.com/stockyard-dev/stockyard-dispatch/internal/store"
 )
@@ -59,19 +57,7 @@ func main() {
 		smtpCfg.Port = "587"
 	}
 
-	licenseKey := os.Getenv("DISPATCH_LICENSE_KEY")
-	licInfo, licErr := license.Validate(licenseKey, "dispatch")
-	if licenseKey != "" && licErr != nil {
-		log.Printf("[license] WARNING: %v — running in free tier", licErr)
-		licInfo = nil
-	}
-	limits := server.LimitsFor(licInfo)
-	if licInfo != nil && licInfo.IsPro() {
-		log.Printf("  License:   Pro (%s)", licInfo.CustomerID)
-	} else {
-		log.Printf("  License:   Free tier (set DISPATCH_LICENSE_KEY to unlock Pro)")
-	}
-
+		limits := server.DefaultLimits()
 	if limits.RetentionDays > retentionDays {
 		retentionDays = limits.RetentionDays
 	}

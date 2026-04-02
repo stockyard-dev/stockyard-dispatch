@@ -1,7 +1,5 @@
 package server
 
-import "github.com/stockyard-dev/stockyard-dispatch/internal/license"
-
 type Limits struct {
 	MaxLists       int  // 0 = unlimited
 	MaxSubscribers int  // total
@@ -11,16 +9,9 @@ type Limits struct {
 	RetentionDays  int
 }
 
-var freeLimits = Limits{
-	MaxLists:       1,
-	MaxSubscribers: 100,
-	MaxSendsMonth:  500,
-	OpenTracking:   false,
-	ClickTracking:  false,
-	RetentionDays:  7,
-}
-
-var proLimits = Limits{
+// DefaultLimits returns fully-unlocked limits for the standalone edition.
+func DefaultLimits() Limits {
+	return Limits{
 	MaxLists:       0,
 	MaxSubscribers: 0,
 	MaxSendsMonth:  0,
@@ -28,14 +19,10 @@ var proLimits = Limits{
 	ClickTracking:  true,
 	RetentionDays:  365,
 }
-
-func LimitsFor(info *license.Info) Limits {
-	if info != nil && info.IsPro() {
-		return proLimits
-	}
-	return freeLimits
 }
 
+// LimitReached returns true if the current count meets or exceeds the limit.
+// A limit of 0 is treated as unlimited.
 func LimitReached(limit, current int) bool {
 	if limit == 0 {
 		return false
