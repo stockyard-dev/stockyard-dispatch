@@ -13,16 +13,19 @@ import (
 const publicKeyHex = "3af8f9593b3331c27994f1eeacf111c727ff6015016b0af44ed3ca6934d40b13"
 
 type Limits struct {
+	MaxLists int
+	MaxSubscribers int
+	RetentionDays int
 	MaxItems int
 	Tier     string
 }
 
 func FreeLimits() Limits {
-	return Limits{MaxItems: 10, Tier: "free"}
+	return Limits{MaxItems: 10, MaxLists: 10, MaxSubscribers: 100, RetentionDays: 30, Tier: "free"}
 }
 
 func ProLimits() Limits {
-	return Limits{MaxItems: 0, Tier: "pro"}
+	return Limits{MaxItems: 0, MaxLists: 0, MaxSubscribers: 0, RetentionDays: 0, Tier: "pro"}
 }
 
 func DefaultLimits() Limits {

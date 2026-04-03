@@ -22,7 +22,7 @@ pre{background:var(--bg3);padding:.8rem 1rem;font-family:var(--font-mono);font-s
 <svg viewBox="0 0 64 64" width="22" height="22" fill="none"><rect x="8" y="8" width="8" height="48" rx="2.5" fill="#e8753a"/><rect x="28" y="8" width="8" height="48" rx="2.5" fill="#e8753a"/><rect x="48" y="8" width="8" height="48" rx="2.5" fill="#e8753a"/><rect x="8" y="27" width="48" height="7" rx="2.5" fill="#c4a87a"/></svg>
 <span class="hdr-brand">Stockyard</span><span class="hdr-title">Dispatch</span></div>
 <div style="display:flex;gap:.8rem;align-items:center"><span class="badge">Free</span><a href="/api/status" class="lbl" style="color:var(--leather)">API</a></div></div>
-<div class="main">
+<div class="main"><div id="upgrade-banner" style="display:none;background:#241e18;border:1px solid #8b3d1a;border-left:3px solid #c45d2c;padding:.6rem 1rem;font-size:.78rem;color:#bfb5a3;margin-bottom:.8rem"><strong style="color:#f0e6d3">Free tier</strong> — 10 items max. <a href="https://stockyard.dev/dispatch/" target="_blank" style="color:#e8753a">Upgrade to Pro →</a></div>
 <div class="cards">
   <div class="card"><span class="card-val" id="s-lists">—</span><span class="card-lbl">Lists</span></div>
   <div class="card"><span class="card-val" id="s-subs">—</span><span class="card-lbl">Subscribers</span></div>
@@ -103,6 +103,7 @@ async function deleteList(id){if(!confirm('Delete list?'))return;await fetch('/a
 function fmt(n){if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return n;}
 function esc(s){const d=document.createElement('div');d.textContent=s||'';return d.innerHTML;}
 refresh();setInterval(refresh,8000);
+fetch('/api/tier').then(r=>r.json()).then(j=>{if(j.tier==='free'){var b=document.getElementById('upgrade-banner');if(b)b.style.display='block'}}).catch(()=>{var b=document.getElementById('upgrade-banner');if(b)b.style.display='block'});
 </script></body></html>`
 
 func (s *Server) handleUI(w http.ResponseWriter, r *http.Request) {
