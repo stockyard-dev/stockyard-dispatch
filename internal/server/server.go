@@ -66,6 +66,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /health", s.handleHealth)
 	s.mux.HandleFunc("GET /ui", s.handleUI)
 	s.mux.HandleFunc("GET /api/version", func(w http.ResponseWriter, r *http.Request) {
+s.mux.HandleFunc("GET /api/tier",func(w http.ResponseWriter,r *http.Request){wj(w,200,map[string]any{"tier":s.limits.Tier,"upgrade_url":"https://stockyard.dev/dispatch/"})})
 		writeJSON(w, 200, map[string]any{"product": "stockyard-dispatch", "version": "0.1.0"})
 	})
 }
