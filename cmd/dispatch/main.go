@@ -73,6 +73,7 @@ func main() {
 		smtpStatus = smtpCfg.Host + ":" + smtpCfg.Port
 	}
 
+	log.Printf("  Questions? hello@stockyard.dev")
 	log.Printf("")
 	log.Printf("  Stockyard Dispatch %s", version)
 	log.Printf("  API:            http://localhost:%d/api/lists", port)
