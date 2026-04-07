@@ -3,13 +3,15 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/stockyard-dev/stockyard-dispatch/internal/store"
+	"io"
 	"log"
 	"net/http"
 	"net/smtp"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/stockyard-dev/stockyard-dispatch/internal/store"
 )
 
 type SMTPConfig struct {
@@ -21,16 +23,23 @@ type SMTPConfig struct {
 }
 
 type Server struct {
-	db     *store.DB
-	mux    *http.ServeMux
-	port   int
-	limits Limits
-	smtp   SMTPConfig
+	db      *store.DB
+	mux     *http.ServeMux
+	port    int
+	limits  Limits
+	smtp    SMTPConfig
+	dataDir string
+	pCfg    map[string]json.RawMessage
 }
 
-func New(db *store.DB, port int, limits Limits, smtpCfg SMTPConfig) *Server {
-	s := &Server{db: db, mux: http.NewServeMux(), port: port, limits: limits, smtp: smtpCfg}
+func New(db *store.DB, port int, limits Limits, smtpCfg SMTPConfig, dataDir string) *Server {
+	s := &Server{db: db, mux: http.NewServeMux(), port: port, limits: limits, smtp: smtpCfg, dataDir: dataDir}
 	s.routes()
+	s.loadPersonalConfig()
+	s.mux.HandleFunc("GET /api/config", s.configHandler)
+	s.mux.HandleFunc("GET /api/extras/{resource}", s.listExtras)
+	s.mux.HandleFunc("GET /api/extras/{resource}/{id}", s.getExtras)
+	s.mux.HandleFunc("PUT /api/extras/{resource}/{id}", s.putExtras)
 	return s
 }
 
@@ -66,7 +75,9 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /health", s.handleHealth)
 	s.mux.HandleFunc("GET /ui", s.handleUI)
 	s.mux.HandleFunc("GET /api/version", func(w http.ResponseWriter, r *http.Request) {
-s.mux.HandleFunc("GET /api/tier",func(w http.ResponseWriter,r *http.Request){writeJSON(w,200,map[string]any{"tier":s.limits.Tier,"upgrade_url":"https://stockyard.dev/dispatch/"})})
+		s.mux.HandleFunc("GET /api/tier", func(w http.ResponseWriter, r *http.Request) {
+			writeJSON(w, 200, map[string]any{"tier": s.limits.Tier, "upgrade_url": "https://stockyard.dev/dispatch/"})
+		})
 		writeJSON(w, 200, map[string]any{"product": "stockyard-dispatch", "version": "0.1.0"})
 	})
 }
@@ -385,4 +396,71 @@ func writeJSON(w http.ResponseWriter, code int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	json.NewEncoder(w).Encode(v)
+}
+
+// ─── personalization (auto-added) ──────────────────────────────────
+
+func (s *Server) loadPersonalConfig() {
+	path := filepath.Join(s.dataDir, "config.json")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return
+	}
+	var cfg map[string]json.RawMessage
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		log.Printf("%s: warning: could not parse config.json: %v", "dispatch", err)
+		return
+	}
+	s.pCfg = cfg
+	log.Printf("%s: loaded personalization from %s", "dispatch", path)
+}
+
+func (s *Server) configHandler(w http.ResponseWriter, r *http.Request) {
+	if s.pCfg == nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte("{}"))
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(s.pCfg)
+}
+
+func (s *Server) listExtras(w http.ResponseWriter, r *http.Request) {
+	resource := r.PathValue("resource")
+	all := s.db.AllExtras(resource)
+	out := make(map[string]json.RawMessage, len(all))
+	for id, data := range all {
+		out[id] = json.RawMessage(data)
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(out)
+}
+
+func (s *Server) getExtras(w http.ResponseWriter, r *http.Request) {
+	resource := r.PathValue("resource")
+	id := r.PathValue("id")
+	data := s.db.GetExtras(resource, id)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(data))
+}
+
+func (s *Server) putExtras(w http.ResponseWriter, r *http.Request) {
+	resource := r.PathValue("resource")
+	id := r.PathValue("id")
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, `{"error":"read body"}`, 400)
+		return
+	}
+	var probe map[string]any
+	if err := json.Unmarshal(body, &probe); err != nil {
+		http.Error(w, `{"error":"invalid json"}`, 400)
+		return
+	}
+	if err := s.db.SetExtras(resource, id, string(body)); err != nil {
+		http.Error(w, `{"error":"save failed"}`, 500)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"ok":"saved"}`))
 }

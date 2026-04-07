@@ -4,18 +4,22 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"github.com/stockyard-dev/stockyard-dispatch/internal/server"
+	"github.com/stockyard-dev/stockyard-dispatch/internal/store"
 	"log"
 	"os"
 	"strconv"
 	"time"
-	"github.com/stockyard-dev/stockyard-dispatch/internal/server"
-	"github.com/stockyard-dev/stockyard-dispatch/internal/store"
 )
 
 var version = "dev"
 
 func main() {
+	portFlag := flag.Int("port", 0, "")
+	dataFlag := flag.String("data", "", "")
+	flag.Parse()
 	if len(os.Args) > 1 && (os.Args[1] == "--version" || os.Args[1] == "-v" || os.Args[1] == "version") {
 		fmt.Printf("dispatch %s\n", version)
 		os.Exit(0)
@@ -57,11 +61,17 @@ func main() {
 		smtpCfg.Port = "587"
 	}
 
-		limits := server.DefaultLimits()
+	limits := server.DefaultLimits()
 	if limits.RetentionDays > retentionDays {
 		retentionDays = limits.RetentionDays
 	}
 
+	if *portFlag > 0 {
+		port = *portFlag
+	}
+	if *dataFlag != "" {
+		dataDir = *dataFlag
+	}
 	db, err := store.Open(dataDir)
 	if err != nil {
 		log.Fatalf("database: %v", err)
@@ -95,7 +105,7 @@ func main() {
 		}
 	}()
 
-	srv := server.New(db, port, limits, smtpCfg)
+	srv := server.New(db, port, limits, smtpCfg, dataDir)
 	if err := srv.Start(); err != nil {
 		log.Fatalf("server: %v", err)
 	}
